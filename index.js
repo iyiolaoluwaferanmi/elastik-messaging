@@ -36,8 +36,23 @@ app.get(['/facebook', '/instagram', '/threads'], function(req, res) {
   }
 });
 
+// app.post('/facebook', function(req, res) {
+//   console.log('Facebook request body:', req.body);
+
+//   if (!req.isXHubValid()) {
+//     console.log('Warning - request header X-Hub-Signature not present or invalid');
+//     res.sendStatus(401);
+//     return;
+//   }
+
+//   console.log('request header X-Hub-Signature validated');
+//   // Process the Facebook updates here
+//   received_updates.unshift(req.body);
+//   res.sendStatus(200);
+// });
+
 app.post('/facebook', function(req, res) {
-  console.log('Facebook request body:', req.body);
+  console.log('Facebook request body:', JSON.stringify(req.body, null, 2));
 
   if (!req.isXHubValid()) {
     console.log('Warning - request header X-Hub-Signature not present or invalid');
@@ -45,11 +60,26 @@ app.post('/facebook', function(req, res) {
     return;
   }
 
-  console.log('request header X-Hub-Signature validated');
-  // Process the Facebook updates here
-  received_updates.unshift(req.body);
+  const entry = req.body.entry;
+  entry.forEach(event => {
+    event.changes.forEach(change => {
+      const value = change.value;
+
+      if (value.messages) {
+        value.messages.forEach(message => {
+          const wa_id = message.from;
+          const timestamp = message.timestamp;
+          const textBody = message.text?.body || message.button?.payload || '[non-text message]';
+
+          storeMessage(wa_id, timestamp, textBody);  // 👈 Here we store it
+        });
+      }
+    });
+  });
+
   res.sendStatus(200);
 });
+
 
 app.post('/instagram', function(req, res) {
   console.log('Instagram request body:');
