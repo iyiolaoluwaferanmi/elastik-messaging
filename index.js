@@ -36,20 +36,37 @@ app.get(['/facebook', '/instagram', '/threads'], function(req, res) {
   }
 });
 
-// app.post('/facebook', function(req, res) {
-//   console.log('Facebook request body:', req.body);
+/* app.post('/facebook', function(req, res) {
+  console.log('Facebook request body:', req.body);
 
-//   if (!req.isXHubValid()) {
-//     console.log('Warning - request header X-Hub-Signature not present or invalid');
-//     res.sendStatus(401);
-//     return;
-//   }
+  if (!req.isXHubValid()) {
+    console.log('Warning - request header X-Hub-Signature not present or invalid');
+    res.sendStatus(401);
+    return;
+  }
 
-//   console.log('request header X-Hub-Signature validated');
-//   // Process the Facebook updates here
-//   received_updates.unshift(req.body);
-//   res.sendStatus(200);
-// });
+  console.log('request header X-Hub-Signature validated');
+  // Process the Facebook updates here
+  received_updates.unshift(req.body);
+  res.sendStatus(200);
+}); */
+
+app.post('/instagram', function(req, res) {
+  console.log('Instagram request body:');
+  console.log(req.body);
+  // Process the Instagram updates here
+  received_updates.unshift(req.body);
+  res.sendStatus(200);
+});
+
+app.post('/threads', function(req, res) {
+  console.log('Threads request body:');
+  console.log(req.body);
+  // Process the Threads updates here
+  received_updates.unshift(req.body);
+  res.sendStatus(200);
+});
+
 
 app.post('/facebook', function(req, res) {
   console.log('Facebook request body:', JSON.stringify(req.body, null, 2));
@@ -80,21 +97,18 @@ app.post('/facebook', function(req, res) {
   res.sendStatus(200);
 });
 
+function storeMessage(wa_id, timestamp, textBody) {
+  if (!customerMessages[wa_id]) {
+    customerMessages[wa_id] = {};
+  }
 
-app.post('/instagram', function(req, res) {
-  console.log('Instagram request body:');
-  console.log(req.body);
-  // Process the Instagram updates here
-  received_updates.unshift(req.body);
-  res.sendStatus(200);
-});
+  // Format key: 'message_time_1', 'message_time_2', etc.
+  const key = `message_time_${Object.keys(customerMessages[wa_id]).length + 1}`;
 
-app.post('/threads', function(req, res) {
-  console.log('Threads request body:');
-  console.log(req.body);
-  // Process the Threads updates here
-  received_updates.unshift(req.body);
-  res.sendStatus(200);
-});
+  customerMessages[wa_id][key] = {
+    timestamp: timestamp,
+    message: textBody
+  };
+}
 
 app.listen();
