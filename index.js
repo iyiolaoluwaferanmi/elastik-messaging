@@ -3,26 +3,26 @@ var express = require('express');
 var app = express();
 var xhub = require('express-x-hub');
 
-// Set the port for the app to run on (default to 5000 if not provided)
 app.set('port', (process.env.PORT || 5000));
+app.listen(app.get('port'), () => {
+  console.log(`Server running on port ${app.get('port')}`);
+});
 
-// Middleware setup
 app.use(xhub({ algorithm: 'sha1', secret: process.env.APP_SECRET }));
 app.use(bodyParser.json());
 
-// Token for verification
 var token = process.env.TOKEN || 'token';
 
-// Store messages grouped by WhatsApp ID
+// This stores all messages grouped by WA ID
 const customerMessages = {};
 
-// Basic route to see the stored messages
+// Root endpoint to view stored messages
 app.get('/', function(req, res) {
   console.log(req);
   res.send('<pre>' + JSON.stringify(customerMessages, null, 2) + '</pre>');
 });
 
-// Endpoint to handle Facebook, Instagram, and Threads webhook verification
+// Webhook verification endpoints for Facebook, Instagram, and Threads
 app.get(['/facebook', '/instagram', '/threads'], function(req, res) {
   if (
     req.query['hub.mode'] == 'subscribe' &&
@@ -34,7 +34,7 @@ app.get(['/facebook', '/instagram', '/threads'], function(req, res) {
   }
 });
 
-// POST endpoint for receiving messages from Facebook (WhatsApp)
+// Endpoint to handle incoming POST requests from WhatsApp
 app.post('/facebook', function(req, res) {
   console.log('Facebook request body:', JSON.stringify(req.body, null, 2));
 
@@ -50,14 +50,15 @@ app.post('/facebook', function(req, res) {
     event.changes.forEach(change => {
       const value = change.value;
 
-      // If the message exists, process it
+      // Process messages if they exist in the incoming payload
       if (value.messages) {
         value.messages.forEach(message => {
-          const wa_id = message.from;  // WhatsApp ID
+          const wa_id = message.from;  // WhatsApp ID of the sender
           const timestamp = message.timestamp;  // Message timestamp
-          const textBody = message.text?.body || message.button?.payload || '[non-text message]';
+          const textBody = message.text?.body || message.button?.payload || '[non-text message]';  // Extracting message body
 
-          storeMessage(wa_id, timestamp, textBody);  // Store the message
+          // Now store the message
+          storeMessage(wa_id, timestamp, textBody);  // 👈 Store it
         });
       }
     });
@@ -76,13 +77,9 @@ function storeMessage(wa_id, timestamp, textBody) {
   // Format key like 'message_time_1', 'message_time_2', etc.
   const key = `message_time_${Object.keys(customerMessages[wa_id]).length + 1}`;
 
+  // Store the message with timestamp and body
   customerMessages[wa_id][key] = {
     timestamp: timestamp,
     message: textBody
   };
 }
-
-// Start the server
-app.listen(app.get('port'), () => {
-  console.log(`Server running on port ${app.get('port')}`);
-});
