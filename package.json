@@ -11,8 +11,8 @@
     "express": "^4.21.2",
     "express-x-hub": "^1.0.4"
   },
-  "engines": {
-    "node": "0.12.7"
+    "engines": {
+    "node": ">=16.x"
   },
   "repository": {
     "type": "git",
