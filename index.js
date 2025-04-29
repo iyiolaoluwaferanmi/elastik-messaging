@@ -75,10 +75,11 @@ function storeMessage(wa_id, timestamp, textBody) {
   }
 
   // Format key like 'message_time_1', 'message_time_2', etc.
-  const key = `message_time_${Object.keys(customerMessages[wa_id]).length + 1}`;
+  //const key = `message_time_${Object.keys(customerMessages[wa_id]).length + 1}`;
 
   // Store the message with timestamp and body
-  customerMessages[wa_id][key] = {
+ //customerMessages[wa_id][key] = {
+  customerMessages[wa_id][timestamp] = {
     timestamp: timestamp,
     message: textBody
   };
