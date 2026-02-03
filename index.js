@@ -30,19 +30,15 @@ app.post('/', (req, res) => {
   console.log(JSON.stringify(req.body, null, 2));
   console.log('=======================\n\n');
 
-  // Store messages in-memory
-  const entry = req.body.entry || [];
-  entry.forEach(e => {
-    (e.changes || []).forEach(change => {
-      const value = change.value || {};
-      (value.messages || []).forEach(msg => {
-        const wa_id = msg.from;
-        const ts = msg.timestamp;
-        if (!customerMessages[wa_id]) customerMessages[wa_id] = [];
-        customerMessages[wa_id].push({ timestamp: ts, message: msg.text?.body || '[non-text]' });
-      });
-    });
+// Store messages in-memory exactly as received
+const entry = req.body.entry || [];
+entry.forEach(e => {
+  (e.changes || []).forEach(change => {
+    const value = change.value || {};
+    if (!customerMessages[e.id]) customerMessages[e.id] = [];
+    customerMessages[e.id].push(value); // store the entire value object raw
   });
+});
 
   res.sendStatus(200);
 });
