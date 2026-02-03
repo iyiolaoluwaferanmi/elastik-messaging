@@ -1,17 +1,15 @@
-// server.js
 const express = require('express');
 const app = express();
 
-// Parse JSON bodies
 app.use(express.json());
 
-// Port for Heroku or local
 const PORT = process.env.PORT || 5000;
-
-// Your verification token (same as in Meta dashboard)
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'token';
 
-// GET endpoint — webhook verification
+// This stores all messages grouped by WA ID
+const customerMessages = {};
+
+// GET endpoint — verification OR show messages
 app.get('/', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -19,24 +17,34 @@ app.get('/', (req, res) => {
 
   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
     console.log('Webhook verified!');
-    res.status(200).send(challenge);
-  } else {
-    console.log('Webhook verification failed!');
-    res.sendStatus(403);
+    return res.status(200).send(challenge);
   }
+
+  // No verification params → show stored messages
+  res.send('<pre>' + JSON.stringify(customerMessages, null, 2) + '</pre>');
 });
 
-// POST endpoint — handle incoming messages
+// POST endpoint — receive WhatsApp messages
 app.post('/', (req, res) => {
   console.log('\n\n=== Incoming webhook ===');
-  console.log(JSON.stringify(req.body, null, 2)); // full payload
+  console.log(JSON.stringify(req.body, null, 2));
   console.log('=======================\n\n');
 
-  // Always acknowledge
+  // Store messages in-memory
+  const entry = req.body.entry || [];
+  entry.forEach(e => {
+    (e.changes || []).forEach(change => {
+      const value = change.value || {};
+      (value.messages || []).forEach(msg => {
+        const wa_id = msg.from;
+        const ts = msg.timestamp;
+        if (!customerMessages[wa_id]) customerMessages[wa_id] = [];
+        customerMessages[wa_id].push({ timestamp: ts, message: msg.text?.body || '[non-text]' });
+      });
+    });
+  });
+
   res.sendStatus(200);
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
