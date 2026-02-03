@@ -1,86 +1,42 @@
-var bodyParser = require('body-parser');
-var express = require('express');
-var app = express();
-var xhub = require('express-x-hub');
+// server.js
+const express = require('express');
+const app = express();
 
-app.set('port', (process.env.PORT || 5000));
-app.listen(app.get('port'), () => {
-  console.log(`Server running on port ${app.get('port')}`);
-});
+// Parse JSON bodies
+app.use(express.json());
 
-app.use(xhub({ algorithm: 'sha1', secret: process.env.APP_SECRET }));
-app.use(bodyParser.json());
+// Port for Heroku or local
+const PORT = process.env.PORT || 5000;
 
-var token = process.env.TOKEN || 'token';
+// Your verification token (same as in Meta dashboard)
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'token';
 
-// This stores all messages grouped by WA ID
-const customerMessages = {};
+// GET endpoint — webhook verification
+app.get('/', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
 
-// Root endpoint to view stored messages
-app.get('/', function(req, res) {
-  console.log(req);
-  res.send('<pre>' + JSON.stringify(customerMessages, null, 2) + '</pre>');
-});
-
-// Webhook verification endpoints for Facebook, Instagram, and Threads
-app.get(['/facebook', '/instagram', '/threads'], function(req, res) {
-  if (
-    req.query['hub.mode'] == 'subscribe' &&
-    req.query['hub.verify_token'] == token
-  ) {
-    res.send(req.query['hub.challenge']);
+  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+    console.log('Webhook verified!');
+    res.status(200).send(challenge);
   } else {
-    res.sendStatus(400);
+    console.log('Webhook verification failed!');
+    res.sendStatus(403);
   }
 });
 
-// Endpoint to handle incoming POST requests from WhatsApp
-app.post('/facebook', function(req, res) {
-  console.log('Facebook request body:', JSON.stringify(req.body, null, 2));
+// POST endpoint — handle incoming messages
+app.post('/', (req, res) => {
+  console.log('\n\n=== Incoming webhook ===');
+  console.log(JSON.stringify(req.body, null, 2)); // full payload
+  console.log('=======================\n\n');
 
-  // Check for valid X-Hub signature
-  if (!req.isXHubValid()) {
-    console.log('Warning - request header X-Hub-Signature not present or invalid');
-    res.sendStatus(401);
-    return;
-  }
-
-  const entry = req.body.entry;
-  entry.forEach(event => {
-    event.changes.forEach(change => {
-      const value = change.value;
-
-      // Process messages if they exist in the incoming payload
-      if (value.messages) {
-        value.messages.forEach(message => {
-          const wa_id = message.from;  // WhatsApp ID of the sender
-          const timestamp = message.timestamp;  // Message timestamp
-          const textBody = message.text?.body || message.button?.payload || '[non-text message]';  // Extracting message body
-
-          // Now store the message
-          storeMessage(wa_id, timestamp, textBody);  // 👈 Store it
-        });
-      }
-    });
-  });
-
-  // Acknowledge receipt of the webhook
+  // Always acknowledge
   res.sendStatus(200);
 });
 
-// Function to store messages in the customerMessages object
-function storeMessage(wa_id, timestamp, textBody) {
-  if (!customerMessages[wa_id]) {
-    customerMessages[wa_id] = {};  // Initialize if the customer doesn't exist yet
-  }
-
-  // Format key like 'message_time_1', 'message_time_2', etc.
-  //const key = `message_time_${Object.keys(customerMessages[wa_id]).length + 1}`;
-
-  // Store the message with timestamp and body
- //customerMessages[wa_id][key] = {
-  customerMessages[wa_id][timestamp] = {
-    timestamp: timestamp,
-    message: textBody
-  };
-}
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
